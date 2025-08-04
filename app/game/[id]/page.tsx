@@ -437,8 +437,12 @@ export default function GamePage() {
       return { completedLines: 0, completedCells: new Set(), strikeLines: [] }
     }
 
-    // Don't check if no numbers are marked
-    if (!marked || marked.length === 0) {
+    // Include both marked numbers by current player and all called numbers
+    const calledNumbers = moves.map(move => move.number_called);
+    const allMarkedNumbers = [...new Set([...marked, ...calledNumbers])]
+
+    // Don't check if no numbers are marked or called
+    if (allMarkedNumbers.length === 0) {
       return { completedLines: 0, completedCells: new Set(), strikeLines: [] }
     }
 
@@ -454,7 +458,7 @@ export default function GamePage() {
 
     // Check rows
     for (let row = 0; row < 5; row++) {
-      if (grid[row].length === 5 && grid[row].every((num) => marked.includes(num))) {
+      if (grid[row].length === 5 && grid[row].every((num) => allMarkedNumbers.includes(num))) {
         completedLines++
         strikeLines.push({ type: "row", index: row })
         // Add all cells in this row to completed cells
@@ -467,7 +471,7 @@ export default function GamePage() {
     // Check columns
     for (let col = 0; col < 5; col++) {
       const column = grid.map((row) => row[col])
-      if (column.length === 5 && column.every((num) => marked.includes(num))) {
+      if (column.length === 5 && column.every((num) => allMarkedNumbers.includes(num))) {
         completedLines++
         strikeLines.push({ type: "column", index: col })
         // Add all cells in this column to completed cells
@@ -481,7 +485,7 @@ export default function GamePage() {
     const diagonal1 = [grid[0][0], grid[1][1], grid[2][2], grid[3][3], grid[4][4]]
     const diagonal2 = [grid[0][4], grid[1][3], grid[2][2], grid[3][1], grid[4][0]]
 
-    if (diagonal1.every((num) => marked.includes(num))) {
+    if (diagonal1.every((num) => allMarkedNumbers.includes(num))) {
       completedLines++
       strikeLines.push({ type: "diagonal", index: 0 })
       // Add diagonal cells
@@ -490,7 +494,7 @@ export default function GamePage() {
       }
     }
 
-    if (diagonal2.every((num) => marked.includes(num))) {
+    if (diagonal2.every((num) => allMarkedNumbers.includes(num))) {
       completedLines++
       strikeLines.push({ type: "diagonal", index: 1 })
       // Add anti-diagonal cells
@@ -503,6 +507,7 @@ export default function GamePage() {
   }
 
   const hasWinningPattern = (board: number[], marked: number[]) => {
+    // Get completed lines info using both marked and called numbers
     const { completedLines } = getCompletedLines(board, marked)
 
     // Winner needs 5 or more completed lines
@@ -532,15 +537,13 @@ export default function GamePage() {
       <div className="relative w-full max-w-xs mx-auto">
         <div className="grid grid-cols-5 gap-1">
           {grid.flat().map((number, index) => {
-            const isMarked = player.marked_numbers.includes(number)
+            const isMarked = player.marked_numbers.includes(number) || moves.some((move) => move.number_called === number)
             const isCompletedLine = completedCells.has(index)
-            const isAlreadyCalled = moves.some((move) => move.number_called === number)
             const canClick =
               isCurrentPlayer &&
               game?.status === "playing" &&
               game?.current_player === currentPlayer?.player_number &&
-              !isMarked &&
-              !isAlreadyCalled
+              !isMarked
 
             return (
               <div
@@ -552,16 +555,14 @@ export default function GamePage() {
                     isMarked && isCompletedLine
                       ? "bg-blue-500 text-white border-blue-600" // Blue for completed lines
                       : isMarked
-                        ? "bg-green-500 text-white border-green-600" // Green for regular marked
-                        : isAlreadyCalled && !isMarked
-                          ? "bg-gray-300 text-gray-500 border-gray-400 cursor-not-allowed" // Gray for called but not on this board
-                          : isCurrentPlayer
-                            ? canClick
-                              ? selectedNumber === number
-                                ? "bg-yellow-500 text-white border-yellow-600 cursor-pointer" // Yellow for selected
-                                : "bg-white border-gray-300 hover:border-gray-400 cursor-pointer hover:bg-gray-50"
-                              : "bg-white border-gray-300"
-                            : "bg-gray-100 border-gray-200"
+                        ? "bg-green-500 text-white border-green-600" // Green for regular marked or called
+                        : isCurrentPlayer
+                          ? canClick
+                            ? selectedNumber === number
+                              ? "bg-yellow-500 text-white border-yellow-600 cursor-pointer" // Yellow for selected
+                              : "bg-white border-gray-300 hover:border-gray-400 cursor-pointer hover:bg-gray-50"
+                            : "bg-white border-gray-300"
+                          : "bg-gray-100 border-gray-200"
                   }
                 `}
               >
@@ -884,10 +885,6 @@ export default function GamePage() {
                   <div className="flex items-center gap-1">
                     <div className="w-3 h-3 bg-yellow-500 rounded"></div>
                     <span>{t("legend.selected")}</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <div className="w-3 h-3 bg-gray-300 rounded"></div>
-                    <span>Called</span>
                   </div>
                 </div>
               </div>
