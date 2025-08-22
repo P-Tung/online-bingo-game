@@ -46,6 +46,11 @@ export default function HomePage() {
     try {
       console.log("Creating new game...")
 
+      // Check if Firebase is properly initialized
+      if (!db) {
+        throw new Error("Firebase database is not initialized");
+      }
+
       // Create game document
       const gameRef = await addDoc(collection(db, "games"), {
         status: "waiting",
@@ -84,7 +89,11 @@ export default function HomePage() {
       router.push(`/game/${gameRef.id}`)
     } catch (error) {
       console.error("Error creating game:", error)
-      alert(t("error.createGameFailed"))
+      if (error instanceof Error) {
+        alert(`${t("error.createGameFailed")}: ${error.message}`)
+      } else {
+        alert(t("error.createGameFailed"))
+      }
     } finally {
       setLoading(false)
     }
@@ -144,7 +153,11 @@ export default function HomePage() {
       router.push(`/game/${matchingGame.id}`)
     } catch (error) {
       console.error("Error joining game:", error)
-      alert(t("error.joinGameFailed"))
+      if (error instanceof Error) {
+        alert(`${t("error.joinGameFailed")}: ${error.message}`)
+      } else {
+        alert(t("error.joinGameFailed"))
+      }
     } finally {
       setLoading(false)
     }
