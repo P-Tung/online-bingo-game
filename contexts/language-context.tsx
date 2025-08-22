@@ -101,6 +101,69 @@ const translations = {
 
     // Player labels
     "player.you": "You are Player",
+    
+    // Common actions
+    "common.close": "Close",
+    "common.cancel": "Cancel",
+    "common.confirm": "Confirm",
+    "common.save": "Save",
+    "common.delete": "Delete",
+    "common.edit": "Edit",
+    "common.back": "Back",
+    "common.next": "Next",
+    "common.previous": "Previous",
+    "common.continue": "Continue",
+    "common.submit": "Submit",
+    "common.reset": "Reset",
+    "common.clear": "Clear",
+    "common.refresh": "Refresh",
+    "common.loading": "Loading...",
+    "common.error": "Error",
+    "common.success": "Success",
+    "common.warning": "Warning",
+    "common.info": "Info",
+    
+    // Navigation
+    "nav.home": "Home",
+    "nav.game": "Game",
+    "nav.settings": "Settings",
+    "nav.help": "Help",
+    "nav.about": "About",
+    
+    // Form validation
+    "validation.required": "This field is required",
+    "validation.minLength": "Minimum length is {min} characters",
+    "validation.maxLength": "Maximum length is {max} characters",
+    "validation.invalidEmail": "Please enter a valid email",
+    "validation.invalidNumber": "Please enter a valid number",
+    
+    // Board related
+    "board.cell": "Cell",
+    "board.row": "Row",
+    "board.column": "Column",
+    "board.number": "Number",
+    "board.empty": "Empty",
+    "board.filled": "Filled",
+    
+    // Game mechanics
+    "mechanics.bingo": "BINGO!",
+    "mechanics.line": "Line",
+    "mechanics.diagonal": "Diagonal",
+    "mechanics.horizontal": "Horizontal",
+    "mechanics.vertical": "Vertical",
+    "mechanics.pattern": "Pattern",
+    "mechanics.turn": "Turn",
+    "mechanics.round": "Round",
+    "mechanics.score": "Score",
+    "mechanics.points": "Points",
+    
+    // Connection status
+    "connection.connected": "Connected",
+    "connection.disconnected": "Disconnected",
+    "connection.connecting": "Connecting...",
+    "connection.reconnecting": "Reconnecting...",
+    "connection.lost": "Connection lost",
+    "connection.restored": "Connection restored",
   },
   vi: {
     // Home page
@@ -191,6 +254,69 @@ const translations = {
 
     // Player labels
     "player.you": "Bạn là Người chơi",
+    
+    // Common actions
+    "common.close": "Đóng",
+    "common.cancel": "Hủy",
+    "common.confirm": "Xác nhận",
+    "common.save": "Lưu",
+    "common.delete": "Xóa",
+    "common.edit": "Chỉnh sửa",
+    "common.back": "Quay lại",
+    "common.next": "Tiếp theo",
+    "common.previous": "Trước",
+    "common.continue": "Tiếp tục",
+    "common.submit": "Gửi",
+    "common.reset": "Đặt lại",
+    "common.clear": "Xóa",
+    "common.refresh": "Làm mới",
+    "common.loading": "Đang tải...",
+    "common.error": "Lỗi",
+    "common.success": "Thành công",
+    "common.warning": "Cảnh báo",
+    "common.info": "Thông tin",
+    
+    // Navigation
+    "nav.home": "Trang chủ",
+    "nav.game": "Trò chơi",
+    "nav.settings": "Cài đặt",
+    "nav.help": "Trợ giúp",
+    "nav.about": "Giới thiệu",
+    
+    // Form validation
+    "validation.required": "Trường này là bắt buộc",
+    "validation.minLength": "Độ dài tối thiểu là {min} ký tự",
+    "validation.maxLength": "Độ dài tối đa là {max} ký tự",
+    "validation.invalidEmail": "Vui lòng nhập email hợp lệ",
+    "validation.invalidNumber": "Vui lòng nhập số hợp lệ",
+    
+    // Board related
+    "board.cell": "Ô",
+    "board.row": "Hàng",
+    "board.column": "Cột",
+    "board.number": "Số",
+    "board.empty": "Trống",
+    "board.filled": "Đã điền",
+    
+    // Game mechanics
+    "mechanics.bingo": "BINGO!",
+    "mechanics.line": "Đường",
+    "mechanics.diagonal": "Chéo",
+    "mechanics.horizontal": "Ngang",
+    "mechanics.vertical": "Dọc",
+    "mechanics.pattern": "Mẫu",
+    "mechanics.turn": "Lượt",
+    "mechanics.round": "Vòng",
+    "mechanics.score": "Điểm",
+    "mechanics.points": "Điểm số",
+    
+    // Connection status
+    "connection.connected": "Đã kết nối",
+    "connection.disconnected": "Đã ngắt kết nối",
+    "connection.connecting": "Đang kết nối...",
+    "connection.reconnecting": "Đang kết nối lại...",
+    "connection.lost": "Mất kết nối",
+    "connection.restored": "Khôi phục kết nối",
   },
 }
 
