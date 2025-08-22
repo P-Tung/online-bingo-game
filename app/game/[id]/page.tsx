@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useEffect, useRef } from "react"
@@ -6,11 +7,24 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Eye, EyeOff, Copy, Check } from "lucide-react"
-import { supabase, type Game, type GamePlayer, type GameMove } from "@/lib/supabase"
+import { db, type Game, type GamePlayer, type GameMove } from "@/lib/firebase"
+import { 
+  doc, 
+  getDoc, 
+  collection, 
+  getDocs, 
+  query, 
+  where, 
+  orderBy, 
+  onSnapshot, 
+  addDoc, 
+  updateDoc, 
+  setDoc,
+  serverTimestamp 
+} from "firebase/firestore"
 import BoardSetup from "@/components/board-setup"
 import GameHeader from "@/components/game-header"
 import { useLanguage } from "@/contexts/language-context"
-import type { RealtimeChannel } from "@supabase/supabase-js"
 
 // Broadcast event types
 type BroadcastEvent =
@@ -35,8 +49,10 @@ export default function GamePage() {
   const [loading, setLoading] = useState(true)
   const [copied, setCopied] = useState(false)
 
-  // Realtime channel ref
-  const channelRef = useRef<RealtimeChannel | null>(null)
+  // Realtime listeners refs
+  const gameUnsubscribeRef = useRef<(() => void) | null>(null)
+  const playersUnsubscribeRef = useRef<(() => void) | null>(null)
+  const movesUnsubscribeRef = useRef<(() => void) | null>(null)
 
   // Function to fetch initial game data (only called once)
   const fetchInitialGameData = async () => {
@@ -44,23 +60,41 @@ export default function GamePage() {
       console.log("Fetching initial game data for:", gameId)
 
       // Load game
-      const { data: gameData } = await supabase.from("games").select("*").eq("id", gameId).single()
+      const gameDocRef = doc(db, "games", gameId)
+      const gameSnapshot = await getDoc(gameDocRef)
+      
+      if (!gameSnapshot.exists()) {
+        console.error("Game not found")
+        return
+      }
+
+      const gameData = { id: gameSnapshot.id, ...gameSnapshot.data() } as Game
       console.log("Game data:", gameData)
 
       // Load players
-      const { data: playersData } = await supabase
-        .from("game_players")
-        .select("*")
-        .eq("game_id", gameId)
-        .order("player_number")
+      const playersQuery = query(
+        collection(db, "game_players"), 
+        where("game_id", "==", gameId), 
+        orderBy("player_number")
+      )
+      const playersSnapshot = await getDocs(playersQuery)
+      const playersData = playersSnapshot.docs.map(doc => ({ 
+        id: doc.id, 
+        ...doc.data() 
+      })) as GamePlayer[]
       console.log("Players data:", playersData)
 
       // Load moves
-      const { data: movesData } = await supabase
-        .from("game_moves")
-        .select("*")
-        .eq("game_id", gameId)
-        .order("created_at")
+      const movesQuery = query(
+        collection(db, "game_moves"), 
+        where("game_id", "==", gameId), 
+        orderBy("created_at")
+      )
+      const movesSnapshot = await getDocs(movesQuery)
+      const movesData = movesSnapshot.docs.map(doc => ({ 
+        id: doc.id, 
+        ...doc.data() 
+      })) as GameMove[]
 
       setGame(gameData)
       setPlayers(playersData || [])
@@ -70,22 +104,13 @@ export default function GamePage() {
       if (gameData && gameData.status === "waiting" && playersData && playersData.length === 2) {
         console.log("Auto-fixing: Game has 2 players but status is still 'waiting', updating to 'setup'")
         try {
-          const { data: updatedGame } = await supabase
-            .from("games")
-            .update({ status: "setup" })
-            .eq("id", gameId)
-            .select()
-            .single()
-
-          if (updatedGame) {
-            setGame(updatedGame)
-            // Broadcast the game update
-            channelRef.current?.send({
-              type: "broadcast",
-              event: "game_updated",
-              payload: { game: updatedGame },
-            })
-          }
+          const gameRef = doc(db, "games", gameId)
+          await updateDoc(gameRef, { status: "setup" })
+          
+          const updatedGameData = { ...gameData, status: "setup" as const }
+          setGame(updatedGameData)
+          
+          // Broadcast the game update would go here in a real-time system
         } catch (error) {
           console.error("Error updating game status:", error)
         }
@@ -110,94 +135,59 @@ export default function GamePage() {
     }
   }
 
-  // Set up realtime subscription
-  const setupRealtimeSubscription = () => {
-    if (channelRef.current) {
-      channelRef.current.unsubscribe()
-    }
+  // Set up real-time listeners
+  const setupRealtimeListeners = () => {
+    console.log("Setting up real-time listeners for game:", gameId)
 
-    console.log("Setting up realtime subscription for game:", gameId)
-
-    const channel = supabase
-      .channel(`game:${gameId}`)
-      .on("broadcast", { event: "player_joined" }, ({ payload }: { payload: BroadcastEvent["payload"] }) => {
-        console.log("Player joined event received:", payload)
-        if ("player" in payload) {
-          setPlayers((prev) => {
-            const exists = prev.find((p) => p.id === payload.player.id)
-            if (exists) return prev
-            return [...prev, payload.player].sort((a, b) => a.player_number - b.player_number)
-          })
-        }
-      })
-      .on("broadcast", { event: "game_updated" }, ({ payload }: { payload: BroadcastEvent["payload"] }) => {
-        console.log("Game updated event received:", payload)
-        if ("game" in payload) {
-          setGame((prevGame) => {
-            // Only update if this is a different update (to prevent loops)
-            if (prevGame?.current_player !== payload.game.current_player || prevGame?.status !== payload.game.status) {
-              return payload.game
-            }
-            return prevGame
-          })
-        }
-      })
-      .on("broadcast", { event: "board_setup_complete" }, ({ payload }: { payload: BroadcastEvent["payload"] }) => {
-        console.log("Board setup complete event received:", payload)
-        if ("playerId" in payload) {
-          setPlayers((prev) => prev.map((p) => (p.id === payload.playerId ? { ...p, board_setup_complete: true } : p)))
-        }
-      })
-      .on("broadcast", { event: "number_called" }, ({ payload }: { payload: BroadcastEvent["payload"] }) => {
-        console.log("Number called event received:", payload)
-        if ("move" in payload && "updatedPlayers" in payload) {
-          // Only update if this move isn't already in our local state (to prevent duplicates)
-          setMoves((prev) => {
-            const exists = prev.find((m) => m.id === payload.move.id)
-            if (exists) return prev
-            return [...prev, payload.move]
-          })
-
-          // Update players state
-          setPlayers((prev) => {
-            // Only update if the marked numbers are different
-            const needsUpdate = prev.some((localPlayer) => {
-              const updatedPlayer = payload.updatedPlayers.find((p) => p.id === localPlayer.id)
-              return updatedPlayer && localPlayer.marked_numbers.length !== updatedPlayer.marked_numbers.length
-            })
-
-            if (needsUpdate) {
-              return payload.updatedPlayers
-            }
-            return prev
-          })
-
-          // Update current player state if they have the called number
-          if (currentPlayer && currentPlayer.board_numbers.includes(payload.move.number_called)) {
-            setCurrentPlayer((prev) => {
-              if (!prev) return prev
-              const alreadyMarked = prev.marked_numbers.includes(payload.move.number_called)
-              if (alreadyMarked) return prev
-
-              return {
-                ...prev,
-                marked_numbers: [...prev.marked_numbers, payload.move.number_called],
-              }
-            })
+    // Game listener
+    const gameRef = doc(db, "games", gameId)
+    gameUnsubscribeRef.current = onSnapshot(gameRef, (doc) => {
+      if (doc.exists()) {
+        const gameData = { id: doc.id, ...doc.data() } as Game
+        setGame(prevGame => {
+          if (prevGame?.current_player !== gameData.current_player || prevGame?.status !== gameData.status) {
+            return gameData
           }
-        }
-      })
-      .on("broadcast", { event: "game_finished" }, ({ payload }: { payload: BroadcastEvent["payload"] }) => {
-        console.log("Game finished event received:", payload)
-        if ("winner" in payload && "game" in payload) {
-          setGame(payload.game)
-        }
-      })
-      .subscribe((status) => {
-        console.log("Realtime subscription status:", status)
-      })
+          return prevGame
+        })
+      }
+    })
 
-    channelRef.current = channel
+    // Players listener
+    const playersQuery = query(
+      collection(db, "game_players"), 
+      where("game_id", "==", gameId), 
+      orderBy("player_number")
+    )
+    playersUnsubscribeRef.current = onSnapshot(playersQuery, (snapshot) => {
+      const playersData = snapshot.docs.map(doc => ({ 
+        id: doc.id, 
+        ...doc.data() 
+      })) as GamePlayer[]
+      setPlayers(playersData)
+      
+      // Update current player if it exists in the new data
+      if (currentPlayer) {
+        const updatedCurrentPlayer = playersData.find(p => p.id === currentPlayer.id)
+        if (updatedCurrentPlayer) {
+          setCurrentPlayer(updatedCurrentPlayer)
+        }
+      }
+    })
+
+    // Moves listener
+    const movesQuery = query(
+      collection(db, "game_moves"), 
+      where("game_id", "==", gameId), 
+      orderBy("created_at")
+    )
+    movesUnsubscribeRef.current = onSnapshot(movesQuery, (snapshot) => {
+      const movesData = snapshot.docs.map(doc => ({ 
+        id: doc.id, 
+        ...doc.data() 
+      })) as GameMove[]
+      setMoves(movesData)
+    })
   }
 
   const handleBoardSetup = async (boardNumbers: number[]) => {
@@ -207,65 +197,39 @@ export default function GamePage() {
       console.log("Submitting board setup for player", currentPlayer.player_number)
 
       // Update player's board and mark setup as complete
-      const { data: updatedPlayer } = await supabase
-        .from("game_players")
-        .update({
-          board_numbers: boardNumbers,
-          board_setup_complete: true,
-        })
-        .eq("id", currentPlayer.id)
-        .select()
-        .single()
+      const playerRef = doc(db, "game_players", currentPlayer.id)
+      await updateDoc(playerRef, {
+        board_numbers: boardNumbers,
+        board_setup_complete: true,
+      })
 
-      if (updatedPlayer) {
-        setCurrentPlayer(updatedPlayer)
-
-        // Broadcast board setup completion
-        channelRef.current?.send({
-          type: "broadcast",
-          event: "board_setup_complete",
-          payload: {
-            playerId: currentPlayer.id,
-            playerNumber: currentPlayer.player_number,
-          },
-        })
+      const updatedPlayer = { 
+        ...currentPlayer, 
+        board_numbers: boardNumbers, 
+        board_setup_complete: true 
       }
+      setCurrentPlayer(updatedPlayer)
 
       console.log("Board setup submitted successfully")
 
       // Check if both players have completed setup
-      const { data: allPlayers } = await supabase
-        .from("game_players")
-        .select("board_setup_complete")
-        .eq("game_id", gameId)
+      const playersQuery = query(collection(db, "game_players"), where("game_id", "==", gameId))
+      const playersSnapshot = await getDocs(playersQuery)
+      const allPlayers = playersSnapshot.docs.map(doc => doc.data())
 
       console.log("All players setup status:", allPlayers)
 
-      const bothPlayersReady = allPlayers?.every((player) => player.board_setup_complete)
+      const bothPlayersReady = allPlayers.every((player: any) => player.board_setup_complete)
       console.log("Both players ready:", bothPlayersReady)
 
       if (bothPlayersReady) {
         console.log("Starting the game...")
         // Start the game
-        const { data: updatedGame } = await supabase
-          .from("games")
-          .update({
-            status: "playing",
-            setup_complete: true,
-          })
-          .eq("id", gameId)
-          .select()
-          .single()
-
-        if (updatedGame) {
-          setGame(updatedGame)
-          // Broadcast game update
-          channelRef.current?.send({
-            type: "broadcast",
-            event: "game_updated",
-            payload: { game: updatedGame },
-          })
-        }
+        const gameRef = doc(db, "games", gameId)
+        await updateDoc(gameRef, {
+          status: "playing",
+          setup_complete: true,
+        })
       }
     } catch (error) {
       console.error("Error submitting board setup:", error)
@@ -275,16 +239,16 @@ export default function GamePage() {
   useEffect(() => {
     if (!gameId) return
 
-    // Load initial data and set up realtime
+    // Load initial data and set up real-time listeners
     fetchInitialGameData()
-    setupRealtimeSubscription()
+    setupRealtimeListeners()
 
     // Cleanup on unmount
     return () => {
-      if (channelRef.current) {
-        console.log("Cleaning up realtime subscription")
-        channelRef.current.unsubscribe()
-      }
+      console.log("Cleaning up real-time listeners")
+      if (gameUnsubscribeRef.current) gameUnsubscribeRef.current()
+      if (playersUnsubscribeRef.current) playersUnsubscribeRef.current()
+      if (movesUnsubscribeRef.current) movesUnsubscribeRef.current()
     }
   }, [gameId])
 
@@ -320,17 +284,12 @@ export default function GamePage() {
 
     try {
       // Add the move to database
-      const { data: newMove } = await supabase
-        .from("game_moves")
-        .insert({
-          game_id: gameId,
-          number_called: number,
-          called_by_player: currentPlayer.player_number,
-        })
-        .select()
-        .single()
-
-      if (!newMove) return
+      const newMoveRef = await addDoc(collection(db, "game_moves"), {
+        game_id: gameId,
+        number_called: number,
+        called_by_player: currentPlayer.player_number,
+        created_at: serverTimestamp(),
+      })
 
       // Update marked numbers for all players
       const updatedPlayers = players.map((player) => ({
@@ -342,14 +301,11 @@ export default function GamePage() {
 
       // Update players in database
       for (const player of updatedPlayers) {
-        await supabase.from("game_players").update({ marked_numbers: player.marked_numbers }).eq("id", player.id)
+        const playerRef = doc(db, "game_players", player.id)
+        await updateDoc(playerRef, { marked_numbers: player.marked_numbers })
       }
 
       // Update local state immediately for current player
-      setMoves((prev) => [...prev, newMove])
-      setPlayers(updatedPlayers)
-
-      // Update current player state if they have the called number
       if (currentPlayer.board_numbers.includes(number)) {
         setCurrentPlayer((prev) =>
           prev
@@ -365,56 +321,17 @@ export default function GamePage() {
       const winner = checkWinner(updatedPlayers)
 
       if (winner) {
-        const { data: finishedGame } = await supabase
-          .from("games")
-          .update({
-            status: "finished",
-            winner: winner.player_number,
-          })
-          .eq("id", gameId)
-          .select()
-          .single()
-
-        if (finishedGame) {
-          // Update local game state
-          setGame(finishedGame)
-
-          // Broadcast game finished
-          channelRef.current?.send({
-            type: "broadcast",
-            event: "game_finished",
-            payload: { winner, game: finishedGame },
-          })
-        }
+        const gameRef = doc(db, "games", gameId)
+        await updateDoc(gameRef, {
+          status: "finished",
+          winner: winner.player_number,
+        })
       } else {
         // Switch turns
         const nextPlayer = game.current_player === 1 ? 2 : 1
-        const { data: updatedGame } = await supabase
-          .from("games")
-          .update({ current_player: nextPlayer })
-          .eq("id", gameId)
-          .select()
-          .single()
-
-        if (updatedGame) {
-          // Update local game state immediately
-          setGame(updatedGame)
-
-          // Broadcast game update
-          channelRef.current?.send({
-            type: "broadcast",
-            event: "game_updated",
-            payload: { game: updatedGame },
-          })
-        }
+        const gameRef = doc(db, "games", gameId)
+        await updateDoc(gameRef, { current_player: nextPlayer })
       }
-
-      // Broadcast the number call to other players
-      channelRef.current?.send({
-        type: "broadcast",
-        event: "number_called",
-        payload: { move: newMove, updatedPlayers },
-      })
 
       setSelectedNumber(null)
     } catch (error) {
