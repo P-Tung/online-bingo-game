@@ -11,7 +11,6 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { db } from "@/lib/firebase"
 import { collection, addDoc, getDocs, query, where, updateDoc, doc, serverTimestamp } from "firebase/firestore"
-import { useLanguage } from "@/contexts/language-context"
 import LanguageSelector from "@/components/language-selector"
 
 export default function HomePage() {

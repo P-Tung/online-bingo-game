@@ -15,15 +15,27 @@ const translations = {
   en: {
     // Home page
     "home.title": "Bingo Game",
+    "home.subtitle": "Play against friends online",
     "home.enterName": "Enter your name",
+    "home.namePlaceholder": "Your name",
     "home.nameSaved": "✓ Name saved for next time",
     "home.gameSettings": "Game Settings",
     "home.allowOpponentView": "Allow Opponent View",
     "home.opponentViewDesc": "Players can see opponent's progress",
     "home.createGame": "Create New Game",
+    "home.createGameButton": "Create Game",
+    "home.creating": "Creating...",
     "home.or": "or",
     "home.enterPin": "Enter 4-character PIN",
     "home.joinGame": "Join Game",
+    "home.joinGameButton": "Join Game",
+    "home.joining": "Joining...",
+    "home.showOpponent": "Show opponent progress",
+    "home.howToPlay": "How to Play",
+    "home.step1": "Enter your name and create or join a game",
+    "home.step2": "Set up your 5x5 board with numbers 1-25",
+    "home.step3": "Take turns calling numbers",
+    "home.step4": "First to complete a line wins!",
 
     // Game states
     "game.waiting": "waiting",
@@ -97,7 +109,9 @@ const translations = {
     // Errors
     "error.gameNotFound": "Game not found! Please check your PIN.",
     "error.createGame": "Error creating game. Please try again.",
+    "error.createGameFailed": "Failed to create game",
     "error.joinGame": "Error joining game. Please try again.",
+    "error.joinGameFailed": "Failed to join game",
 
     // Player labels
     "player.you": "You are Player",
@@ -168,15 +182,27 @@ const translations = {
   vi: {
     // Home page
     "home.title": "Trò Chơi Bingo",
+    "home.subtitle": "Chơi cùng bạn bè trực tuyến",
     "home.enterName": "Nhập tên của bạn",
+    "home.namePlaceholder": "Tên của bạn",
     "home.nameSaved": "✓ Tên đã được lưu cho lần sau",
     "home.gameSettings": "Cài Đặt Trò Chơi",
     "home.allowOpponentView": "Cho Phép Xem Đối Thủ",
     "home.opponentViewDesc": "Người chơi có thể thấy tiến độ của đối thủ",
     "home.createGame": "Tạo Trò Chơi Mới",
+    "home.createGameButton": "Tạo Trò Chơi",
+    "home.creating": "Đang tạo...",
     "home.or": "hoặc",
     "home.enterPin": "Nhập mã PIN 4 ký tự",
     "home.joinGame": "Tham Gia Trò Chơi",
+    "home.joinGameButton": "Tham Gia",
+    "home.joining": "Đang tham gia...",
+    "home.showOpponent": "Hiển thị tiến độ đối thủ",
+    "home.howToPlay": "Cách Chơi",
+    "home.step1": "Nhập tên và tạo hoặc tham gia trò chơi",
+    "home.step2": "Thiết lập bàn 5x5 với số từ 1-25",
+    "home.step3": "Lần lượt gọi số",
+    "home.step4": "Người đầu tiên hoàn thành một đường thắng!",
 
     // Game states
     "game.waiting": "đang chờ",
@@ -250,7 +276,9 @@ const translations = {
     // Errors
     "error.gameNotFound": "Không tìm thấy trò chơi! Vui lòng kiểm tra mã PIN.",
     "error.createGame": "Lỗi tạo trò chơi. Vui lòng thử lại.",
+    "error.createGameFailed": "Không thể tạo trò chơi",
     "error.joinGame": "Lỗi tham gia trò chơi. Vui lòng thử lại.",
+    "error.joinGameFailed": "Không thể tham gia trò chơi",
 
     // Player labels
     "player.you": "Bạn là Người chơi",
